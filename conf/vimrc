@@ -1,0 +1,8 @@
+set gfn=Ubuntu\ Mono\ 11
+colorscheme molokai
+set t_Co=256
+set nospell
+inoremap jk <Esc>
+noremap <leader>b :bn<CR>
+let g:ctrlp_cmd = "CtrlPBuffer"
+

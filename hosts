@@ -1,0 +1,2 @@
+[local]
+localhost connection=local nickname=vm1 remote_user=ollie

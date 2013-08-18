@@ -1,0 +1,69 @@
+---
+system_packages:
+  - tmux
+  - zsh
+  - git
+  - python-all-dev
+  - python-software-properties
+  - ack-grep
+  - libevent-dev
+  - libxml2-dev
+  - libxslt1-dev
+  - python-pip
+  - python-virtualenv
+  - vim-gtk
+  - curl
+  - terminator
+  - ssh
+  - subversion
+  - virtualbox-4.2
+  - dkms
+  - network-manager-openvpn-gnome
+  - oracle-java7-jdk
+  - oracle-java7-bin
+  - font-manager
+  - cabextract
+  - postgresql-server-dev-9.1
+  - postgresql-contrib-9.1
+  - vagrant
+  - sqlite3
+  - gradle-1.7
+  - curl
+  - tree
+  - htop
+  - build-essential
+  - google-chrome-stable
+  - finalterm
+  - nginx
+  - nodejs
+  - mongodb-10gen
+  - spotify-client
+  - cmake
+  - clang-3.2
+  - autoconf
+  - npm
+
+
+package_ppa:
+  - 'ppa:chris-lea/node.js'
+
+package_url:
+  - 'deb http://repository.spotify.com stable non-free'
+  - 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen'
+  - 'deb http://nginx.org/packages/ubuntu/ raring nginx'
+  - 'deb http://ppa.launchpad.net/finalterm/daily/ubuntu raring main'
+  - 'deb http://ppa.launchpad.net/cwchien/gradle/ubuntu raring main'
+  - 'deb http://dl.google.com/linux/chrome/deb/ stable main'
+
+
+package_keys:
+  - 'https://dl-ssl.google.com/linux/linux_signing_key.pub'
+
+recv_keys:
+  - C300EE8C
+  - 7F0CEB10
+  - 94558F59
+  - 9D06AF36
+  - 509E9101
+
+virtualenv_dir: /home/{{ remote_user }}/.virtualenvs/django

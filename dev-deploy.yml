@@ -1,0 +1,154 @@
+---
+- hosts: local
+  user: "{{ remote_user }}"
+  vars:
+    - homedir: /home/{{ remote_user }}
+  vars_files:
+    - vars.yml
+  sudo: True
+  gather_facts: False
+
+  pre_tasks:
+    - name: Has java installer already been run
+      shell: '[ -f /etc/apt/sources.list.d/oab.list ]'
+      register: oab_run
+      ignore_errors: True
+
+    - name: Has oh-my-zsh been installed
+      shell: '[ -d ~/.oh-my-zsh/ ]'
+      register: zsh_installed
+      ignore_errors: True
+
+    - name: Has spf-13 vim been installed
+      shell: '[ -f ~/.spf13-vim-3/bootstrap.sh ]'
+      register: spf13_installed
+      ignore_errors: True
+
+  tasks:
+    - name: Setup ssh keys
+      local_action: user name={{ remote_user }} generate_ssh_key=yes
+
+    - name: Copy ssh keys
+      authorized_key: key="{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+          user={{ remote_user }}
+      when: remote_deploy is defined
+
+    - name: add recv keys
+      command: apt-key adv --keyserver keyserver.ubuntu.com --recv-keys {{ item }}
+      with_items: ${recv_keys}
+
+    - name: chrome key
+      shell: wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+
+    - name: Add apt apt_repository
+      command: apt-add-repository {{ item }}
+      with_items: ${package_ppa}
+
+    - name: Remove vendor repos
+      file: dest=/etc/apt/sources.list.d/vendor.list state=absent
+
+    - name: Add apt apt_repository
+      shell: echo {{ item }} >> /etc/apt/sources.list.d/vendor.list
+      with_items: ${package_url}
+
+    - name: Upgrade packages
+      apt: upgrade=yes
+
+
+    - name: Download java installer script
+      get_url: url=https://raw.github.com/flexiondotorg/oab-java6/master/oab-java.sh
+        dest=/tmp
+        mode=755
+      when: oab_run|failed
+
+    - name: Run java installer script
+      shell: /tmp/oab-java.sh -7
+      when: oab_run|failed
+
+    - name: install system packages
+      apt: pkg=$item update_cache=yes state=installed force=yes
+      with_items:  ${system_packages}
+
+    - name: Download caja-actions
+      git: repo=https://github.com/NiceandGently/caja-actions dest=/tmp/caja-actions
+
+    - name: install caja-actions
+      shell: cd /tmp/caja-actions && NOCONFIGURE=1 ./autogen.sh &&
+        ./configure --with-gtk=2 --disable-scrollkeeper --enable-html-manuals=gdt &&
+        make &&
+        make install
+      when: gtk3_installed is defined
+
+    - name: symlink ack-grep to ack
+      file: path=/usr/bin/ack src=/usr/bin/ack-grep state=link
+
+    - name: switch to ZSH
+      user: name={{ remote_user }} shell=/usr/bin/zsh
+
+    - name: oh-my-zsh
+      action: git repo=https://github.com/robbyrussell/oh-my-zsh dest={{ homedir }}/.oh-my-zsh
+      sudo: False
+      when: zsh_installed|failed
+
+    - name: copy zsh config
+      copy: src=conf/zshrc dest={{ homedir }}///.zshrc
+      sudo: False
+
+    - name: vim config
+      shell: cd {{ homedir }} && curl http://j.mp/spf13-vim3 -L -o - | sh 
+      sudo: False
+      when: spf13_installed|success
+
+    - name: vim local config
+      copy: src=conf/vimrc dest={{ homedir }}/.vimrc.local
+      sudo: False
+
+    - name: Install virtualenv wrapper
+      pip: name=virtualenvwrapper
+
+    - name: create the virtualenv working directory
+      file: path={{ virtualenv_dir }} state=directory
+      sudo: False
+
+    - name: Copy requirements.txt
+      copy: src=conf/requirements.txt dest={{ virtualenv_dir }}
+      sudo: False
+
+    - name: Install python requirements and virtualenv
+      pip: requirements={{ virtualenv_dir }}/requirements.txt
+        virtualenv={{ virtualenv_dir }}
+      sudo: False
+
+    - name: Make VPN conf dir
+      file: dest={{ homedir }}/vpn state=directory
+      sudo: False
+
+    - name: Copy VPN cert
+      copy: src={{ item }} dest={{ homedir }}/vpn
+      with_items:
+        - conf/ca.crt
+        - conf/client.ovpn
+      sudo: False
+
+    - name: Download ycm vum
+      git: repo=https://github.com/Valloric/YouCompleteMe dest={{ homedir }}/.vim/bundle/YouCompleteMe
+      sudo: False
+
+    - name: install ycm
+      shell: cd {{ homedir }}/.vim/bundle/YouCompleteMe && ./install.sh --clang-completer
+      sudo: False
+
+    - name: Install npms 
+      npm: name={{ item }} global=yes
+      with_items:
+        - grunt
+        - grunt-contrib
+        - bower
+
+    - name: install RVM
+      shell: curl -L https://get.rvm.io | bash -s -- --ignore-dotfiles creates=~/.rvm
+      sudo: False
+
+    - name: install Ruby 2.0
+      shell: rvm install --default $ruby creates=~/.rvm/rubies/$ruby
+      sudo: False
